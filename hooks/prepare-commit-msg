@@ -1,0 +1,27 @@
+#!/bin/bash
+# Automatically injects the Trello ID from the branch name into the commit message.
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+BRANCH_NAME=$(git branch --show-current)
+
+# Extract the 24-character Trello ID
+TRELLO_ID=$(echo "$BRANCH_NAME" | grep -Eo '[a-f0-9]{24}' | head -1)
+
+# Skip if no Trello ID is found in the branch name
+if [ -z "$TRELLO_ID" ]; then
+    exit 0
+fi
+
+# Skip if this is a merge commit or if Git is rebasing/squashing
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
+    exit 0
+fi
+
+# Skip if the ID is already in the message (e.g., when running 'git commit --amend')
+if grep -q "Trello-Card: $TRELLO_ID" "$COMMIT_MSG_FILE"; then
+    exit 0
+fi
+
+# Append the Trello ID as metadata to the bottom of the commit message
+echo -e "\n\nTrello-Card: $TRELLO_ID" >> "$COMMIT_MSG_FILE"
