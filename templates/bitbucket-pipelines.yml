@@ -1,0 +1,67 @@
+image: atlassian/default-image:latest
+
+pipelines:
+  # ==========================================
+  # EVENT: PRs Submitted or Updated
+  # ==========================================
+  pull-requests:
+    # 1. PR submitted targeting 'staging' -> Move to "Ready for Staging"
+    'staging':
+      - step:
+          name: Branch Validation & Move to Ready for Staging
+          script:
+            - echo "Validating branch name..."
+            # FIX: Wrapped in single quotes to prevent YAML parsing errors
+            - '[[ "$BITBUCKET_BRANCH" =~ ^(feature|bugfix|hotfix|chore)/[a-f0-9]{24}- ]] || (echo "❌ Invalid branch name format" && exit 1)'
+            - echo "Extracting Trello ID..."
+            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
+                -d "idList=$LIST_READY_STAGING" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN"
+            - echo "✅ Card moved to Ready for Staging."
+
+    # 2. PR submitted targeting 'main' -> Move to "Ready for Production"
+    'main':
+      - step:
+          name: Branch Validation & Move to Ready for Production
+          script:
+            - '[[ "$BITBUCKET_BRANCH" =~ ^(feature|bugfix|hotfix|chore)/[a-f0-9]{24}- ]] || (echo "❌ Invalid branch name format" && exit 1)'
+            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
+                -d "idList=$LIST_READY_PROD" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN"
+            - echo "✅ Card moved to Ready for Production."
+
+  # ==========================================
+  # EVENT: PRs Merged (Code pushed to target branch)
+  # ==========================================
+  branches:
+    # 3. Code merged into 'staging' -> Move to "Deployed to Staging"
+    staging:
+      - step:
+          name: Move Trello Card to Deployed to Staging
+          script:
+            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
+                -d "idList=$LIST_DEPLOYED_STAGING" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN"
+            - echo "✅ Card moved to Deployed to Staging."
+
+    # 4. Code merged into 'master' -> Move to "Deployed to Production"
+    master:
+      - step:
+          name: Move Trello Card to Deployed to Production
+          script:
+            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
+                -d "idList=$LIST_DEPLOYED_PROD" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN"
+            - echo "✅ Card moved to Deployed to Production."
