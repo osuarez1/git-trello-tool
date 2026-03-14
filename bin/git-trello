@@ -10,7 +10,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-CURRENT_VERSION="1.0.0"
+CURRENT_VERSION="1.0.1"
 
 # ==========================================
 #        CONFIGURATION & LOGGING
@@ -82,10 +82,20 @@ trello_start() {
     log_message "DEBUG" "Initiating 'start' command..."
 
     # Ask for details
-    read -p "Enter Task Type (feature/bugfix/hotfix): " TASK_TYPE
-    read -p "Enter Task Title: " CARD_TITLE
-    read -p "Enter Task Description: " CARD_DESC
+    while true; do
+        read -p "Enter Task Type (feature/bugfix/hotfix/chore/release): " TASK_TYPE
 
+        # Check if the input exactly matches one of the allowed words
+        if [[ "$TASK_TYPE" =~ ^(feature|bugfix|hotfix|chore|release)$ ]]; then
+            break # Valid input, break out of the loop and continue
+        else
+            echo -e "\033[0;31m❌ Invalid task type. Please enter exactly: feature, bugfix, hotfix, or chore.\033[0m"
+        fi
+    done
+
+    read -p "Enter Task Title: " CARD_TITLE
+
+    read -p "Enter Task Description: " CARD_DESC
 
     # Detect Language
     DETECTED_LANG="Unknown"
@@ -127,10 +137,12 @@ trello_start() {
         exit 0
     fi
 
+    DESCRIPTION=$(echo -e "${TASK_DESC}\n\n**Language:** $DETECTED_LANG")
+
     # Create Card (Assuming $TARGET_LIST_ID is configured in secrets for simplicity)
     CREATE_RESP=$(curl -s -w "\n%{http_code}" -X POST \
         --data-urlencode "name=$CARD_TITLE" \
-        --data-urlencode "desc=$CARD_DESC\n\n**Language:** $DETECTED_LANG" \
+        --data-urlencode "desc=$DESCRIPTION" \
         --data-urlencode "idList=$TARGET_LIST_ID" \
         --data-urlencode "idMembers=$MEMBER_ID" \
         "https://api.trello.com/1/cards?key=$API_KEY&token=$TOKEN")
