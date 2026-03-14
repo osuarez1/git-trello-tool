@@ -1,0 +1,53 @@
+name: Sync Version & Create Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'bin/git-trello' # Only run when the main script changes
+
+jobs:
+  update-version-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to push commits and create releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # CRITICAL: Fetches all history so we can check existing tags
+
+      - name: Extract version from script
+        id: get_version
+        run: |
+          VERSION=$(grep -Po 'CURRENT_VERSION="\K[^"]+' bin/git-trello)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update version.txt
+        run: |
+          echo "${{ env.VERSION }}" > version.txt
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.txt
+          git diff --staged --quiet || (git commit -m "chore: sync version.txt to ${{ env.VERSION }}" && git push)
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ env.VERSION }}"
+          
+          # Check if the release already exists so the workflow doesn't crash
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists. Skipping release creation."
+          else
+            echo "Creating new release: $TAG"
+            gh release create "$TAG" \
+              --title "Release $TAG" \
+              --generate-notes
+          fi
