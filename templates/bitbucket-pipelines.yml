@@ -5,63 +5,125 @@ pipelines:
   # EVENT: PRs Submitted or Updated
   # ==========================================
   pull-requests:
-    # 1. PR submitted targeting 'staging' -> Move to "Ready for Staging"
-    'staging':
+    '**': # This runs on ALL Pull Requests
       - step:
-          name: Branch Validation & Move to Ready for Staging
+          name: PR Validation & Trello Sync
           script:
-            - echo "Validating branch name..."
-            # FIX: Wrapped in single quotes to prevent YAML parsing errors
-            - '[[ "$BITBUCKET_BRANCH" =~ ^(feature|bugfix|hotfix|chore)/[a-f0-9]{24}- ]] || (echo "❌ Invalid branch name format" && exit 1)'
-            - echo "Extracting Trello ID..."
+            - echo "Validating branch format..."
+            - '[[ "$BITBUCKET_BRANCH" =~ ^(feature|bugfix|hotfix|chore)/[a-f0-9]{24}- ]] || (echo "❌ Invalid branch format" && exit 1)'
             - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
-            - |
-              curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
-                -d "idList=$LIST_READY_STAGING" \
-                -d "key=$TRELLO_API_KEY" \
-                -d "token=$TRELLO_TOKEN"
-            - echo "✅ Card moved to Ready for Staging."
 
-    # 2. PR submitted targeting 'master' -> Move to "Ready for Production"
-    'master':
-      - step:
-          name: Branch Validation & Move to Ready for Production
-          script:
-            - '[[ "$BITBUCKET_BRANCH" =~ ^(feature|bugfix|hotfix|chore)/[a-f0-9]{24}- ]] || (echo "❌ Invalid branch name format" && exit 1)'
-            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - echo "Checking PR Destination Branch..."
+            - |
+              if [ "$BITBUCKET_PR_DESTINATION_BRANCH" == "staging" ]; then
+                TARGET_LIST=$LIST_READY_STAGING
+                ENV_NAME="Staging"
+              elif [ "$BITBUCKET_PR_DESTINATION_BRANCH" == "master" ] || [ "$BITBUCKET_PR_DESTINATION_BRANCH" == "main" ]; then
+                TARGET_LIST=$LIST_READY_PROD
+                ENV_NAME="Production"
+              else
+                echo "Skipping Trello move. Target branch is $BITBUCKET_PR_DESTINATION_BRANCH"
+                exit 0
+              fi
+
+            - echo "Moving Trello Card to Ready for $ENV_NAME..."
             - |
               curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
-                -d "idList=$LIST_READY_PROD" \
+                -d "idList=$TARGET_LIST" \
                 -d "key=$TRELLO_API_KEY" \
-                -d "token=$TRELLO_TOKEN"
-            - echo "✅ Card moved to Ready for Production."
+                -d "token=$TRELLO_TOKEN" > /dev/null
+
+            - echo "Posting PR Comment to Trello..."
+            # Automatically construct the Bitbucket PR URL
+            - PR_URL="https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/pull-requests/$BITBUCKET_PR_ID"
+            - |
+              COMMENT_TEXT="**🔀 Pull Request Opened**
+              **Target:** \`$BITBUCKET_PR_DESTINATION_BRANCH\`
+              **Link:** $PR_URL"
+            - |
+              curl -s -X POST -G "https://api.trello.com/1/cards/$TRELLO_ID/actions/comments" \
+                --data-urlencode "text=$COMMENT_TEXT" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN" > /dev/null
 
   # ==========================================
-  # EVENT: PRs Merged (Code pushed to target branch)
+  # EVENT: PRs Merged (Code pushed to target)
   # ==========================================
   branches:
-    # 3. Code merged into 'staging' -> Move to "Deployed to Staging"
     staging:
       - step:
-          name: Move Trello Card to Deployed to Staging
+          name: Move to Deployed to Staging & Log
           script:
-            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - echo "Extracting Trello ID from Merge Commit..."
+            - TRELLO_ID=$(git log -1 --pretty=%B | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              if [ -z "$TRELLO_ID" ]; then
+                echo "No Trello ID found in commit message. Skipping."
+                exit 0
+              fi
+
+            - echo "Moving Card..."
             - |
               curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
                 -d "idList=$LIST_DEPLOYED_STAGING" \
                 -d "key=$TRELLO_API_KEY" \
-                -d "token=$TRELLO_TOKEN"
-            - echo "✅ Card moved to Deployed to Staging."
+                -d "token=$TRELLO_TOKEN" > /dev/null
 
-    # 4. Code merged into 'master' -> Move to "Deployed to Production"
+            - echo "Fetching commit stats..."
+            - COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1) # Grabs just the top line of the merge message
+            - COMMIT_STATS=$(git show --stat --oneline $BITBUCKET_COMMIT | tail -n +2)
+
+            - echo "Posting Merge Comment to Trello..."
+            - |
+              COMMENT_TEXT="**✅ Merged to \`staging\`**
+              **Commit:** \`$BITBUCKET_COMMIT\`
+              > $COMMIT_MSG
+
+              **Changes:**
+              \`\`\`text
+              $COMMIT_STATS
+              \`\`\`"
+            - |
+              curl -s -X POST -G "https://api.trello.com/1/cards/$TRELLO_ID/actions/comments" \
+                --data-urlencode "text=$COMMENT_TEXT" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN" > /dev/null
+
     master:
       - step:
-          name: Move Trello Card to Deployed to Production
+          name: Move to Deployed to Production & Log
           script:
-            - TRELLO_ID=$(echo "$BITBUCKET_BRANCH" | grep -Eo '[a-f0-9]{24}' | head -1)
+            - echo "Extracting Trello ID from Merge Commit..."
+            - TRELLO_ID=$(git log -1 --pretty=%B | grep -Eo '[a-f0-9]{24}' | head -1)
+            - |
+              if [ -z "$TRELLO_ID" ]; then
+                echo "No Trello ID found in commit message. Skipping."
+                exit 0
+              fi
+
+            - echo "Moving Card..."
             - |
               curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
                 -d "idList=$LIST_DEPLOYED_PROD" \
                 -d "key=$TRELLO_API_KEY" \
-                -d "token=$TRELLO_TOKEN"
-            - echo "✅ Card moved to Deployed to Production."
+                -d "token=$TRELLO_TOKEN" > /dev/null
+
+            - echo "Fetching commit stats..."
+            - COMMIT_MSG=$(git log -1 --pretty=%B | head -n 1)
+            - COMMIT_STATS=$(git show --stat --oneline $BITBUCKET_COMMIT | tail -n +2)
+
+            - echo "Posting Merge Comment to Trello..."
+            - |
+              COMMENT_TEXT="**🚀 Deployed to \`master\` (Production)**
+              **Commit:** \`$BITBUCKET_COMMIT\`
+              > $COMMIT_MSG
+
+              **Changes:**
+              \`\`\`text
+              $COMMIT_STATS
+              \`\`\`"
+            - |
+              curl -s -X POST -G "https://api.trello.com/1/cards/$TRELLO_ID/actions/comments" \
+                --data-urlencode "text=$COMMENT_TEXT" \
+                -d "key=$TRELLO_API_KEY" \
+                -d "token=$TRELLO_TOKEN" > /dev/null
