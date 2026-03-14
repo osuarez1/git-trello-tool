@@ -1,0 +1,18 @@
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# Local Test Files
+*.log
+.git-trello/
+temp_payload.json
+
+# If you decide to use a local secrets file for testing the script itself
+.trello_secrets
+.env
+
+# Ignore any local python cache from the inline date parser
+__pycache__/
+*.py[cod]
+
+node_modules/
