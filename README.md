@@ -36,7 +36,7 @@ You will also need your **Trello API Key and Token**, which you can generate her
 This tool is designed to be installed **per-repository**. Navigate to the root folder of the project you are working on and run the web installer:
 
 ```bash
-curl -s https://raw.githubusercontent.com/YOUR_USERNAME/git-trello-tool/main/install.sh | bash
+curl -s https://raw.githubusercontent.com/osuarez1/git-trello-tool/main/install.sh | bash
 
 ```
 
