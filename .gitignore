@@ -14,5 +14,5 @@ temp_payload.json
 # Ignore any local python cache from the inline date parser
 __pycache__/
 *.py[cod]
-
+.idea
 node_modules/
