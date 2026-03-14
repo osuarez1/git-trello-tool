@@ -1,0 +1,304 @@
+#!/bin/bash
+# git-trello - Automated Trello & Git Workflow
+# Copyright (C) 2026 Oscar Suarez Alvarez
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 2 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+CURRENT_VERSION="1.0.0"
+
+# ==========================================
+#        CONFIGURATION & LOGGING
+# ==========================================
+SECRETS_FILE="$HOME/.trello_secrets"
+LOG_FILE="$HOME/.git-trello.log"
+DRY_RUN=false
+DEBUG_MODE=false
+
+# Load Secrets
+if [ -f "$SECRETS_FILE" ]; then
+    source "$SECRETS_FILE"
+else
+    echo "Error: ~/.trello_secrets not found. Please run install.sh."
+    exit 1
+fi
+
+# Parse Flags
+for arg in "$@"; do
+    case $arg in
+        --dry-run) DRY_RUN=true ;;
+        --debug)   DEBUG_MODE=true ;;
+    esac
+done
+# Clean up arguments so they don't interfere with command routing
+set -- "${@/--dry-run/}"
+set -- "${@/--debug/}"
+
+log_message() {
+    local level=$1
+    local msg=$2
+    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+    echo "[$timestamp] [$level] $msg" >> "$LOG_FILE"
+    if [[ "$level" == "ERROR" || "$DEBUG_MODE" == true ]]; then
+        echo -e "[$level] $msg"
+    fi
+}
+
+handle_api_response() {
+    local status=$1
+    local response=$2
+    local context=$3
+
+    case $status in
+        401) log_message "ERROR" "401 Unauthorized: Invalid Trello Token/Key. (Context: $context)"; exit 1 ;;
+        410) log_message "ERROR" "410 Gone: Resource deleted. (Context: $context)"; exit 1 ;;
+        200|201) log_message "DEBUG" "Success: $context" ;;
+        *) log_message "ERROR" "API Error ($status): $response (Context: $context)"; exit 1 ;;
+    esac
+}
+
+run_cmd() {
+    local desc=$1
+    local cmd=$2
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "\033[0;33m[DRY RUN]\033[0m $desc"
+        echo -e "         Command: $cmd"
+        return 0
+    else
+        eval "$cmd"
+    fi
+}
+
+# ==========================================
+#               MAIN COMMANDS
+# ==========================================
+
+trello_start() {
+    log_message "DEBUG" "Initiating 'start' command..."
+
+    # Ask for details
+    read -p "Enter Task Type (feature/bugfix/hotfix): " TASK_TYPE
+    read -p "Enter Task Title: " CARD_TITLE
+    read -p "Enter Task Description: " CARD_DESC
+
+
+    # Detect Language
+    DETECTED_LANG="Unknown"
+    # JavaScript / Node.js
+    [ -f "package.json" ] && DETECTED_LANG="JavaScript/Node"
+    # Python (Checking for traditional requirements or modern pipenv/poetry)
+    { [ -f "requirements.txt" ] || [ -f "pyproject.toml" ] || [ -f "Pipfile" ]; } && DETECTED_LANG="Python"
+    # Go
+    [ -f "go.mod" ] && DETECTED_LANG="Go"
+    # Ruby
+    { [ -f "Gemfile" ] || [ -f "Rakefile" ] || ls *.gemspec >/dev/null 2>&1; } && DETECTED_LANG="Ruby"
+    # PHP
+    [ -f "composer.json" ] && DETECTED_LANG="PHP"
+    # Java / Kotlin (Checking for Maven or Gradle)
+    { [ -f "pom.xml" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; } && DETECTED_LANG="Java/Kotlin"
+    # Rust
+    [ -f "Cargo.toml" ] && DETECTED_LANG="Rust"
+    # C# / .NET
+    { ls *.sln >/dev/null 2>&1 || ls *.csproj >/dev/null 2>&1; } && DETECTED_LANG="C#/.NET"
+
+    # Fetch User ID
+    RESPONSE=$(curl -s -w "\n%{http_code}" "https://api.trello.com/1/members/me?key=$API_KEY&token=$TOKEN")
+    HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+    HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+    handle_api_response "$HTTP_STATUS" "$HTTP_BODY" "User Auth"
+    MEMBER_ID=$(echo "$HTTP_BODY" | jq -r '.id')
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "\n\033[0;35m--- DRY RUN: Simulated Execution ---\033[0m"
+        echo "Board Target: $TARGET_BOARD_ID (Fallback/Configured)"
+        echo "Card Title:   $CARD_TITLE"
+        echo "Language:     $DETECTED_LANG"
+        echo "Assigned to:  $MEMBER_ID"
+        run_cmd "Create Trello Card" "curl -s -X POST 'https://api.trello.com/1/cards...'"
+
+        SAFE_TITLE=$(echo "$CARD_TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g')
+        BRANCH_NAME="$TASK_TYPE/5f1b2c3d4e5f6g7h8i9j0k1l-$SAFE_TITLE"
+        run_cmd "Create Git Branch" "git checkout -b $BRANCH_NAME"
+        exit 0
+    fi
+
+    # Create Card (Assuming $TARGET_LIST_ID is configured in secrets for simplicity)
+    CREATE_RESP=$(curl -s -w "\n%{http_code}" -X POST \
+        --data-urlencode "name=$CARD_TITLE" \
+        --data-urlencode "desc=$CARD_DESC\n\n**Language:** $DETECTED_LANG" \
+        --data-urlencode "idList=$TARGET_LIST_ID" \
+        --data-urlencode "idMembers=$MEMBER_ID" \
+        "https://api.trello.com/1/cards?key=$API_KEY&token=$TOKEN")
+
+    CREATE_STATUS=$(echo "$CREATE_RESP" | tail -n1)
+    CREATE_BODY=$(echo "$CREATE_RESP" | sed '$d')
+    handle_api_response "$CREATE_STATUS" "$CREATE_BODY" "Create Card"
+
+    CARD_ID=$(echo "$CREATE_BODY" | jq -r '.id')
+
+    # Create Branch
+    SAFE_TITLE=$(echo "$CARD_TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g')
+    BRANCH_NAME="$TASK_TYPE/$CARD_ID-$SAFE_TITLE"
+
+    git checkout -b "$BRANCH_NAME"
+    echo "✅ Card #$CARD_ID created and branch $BRANCH_NAME checked out."
+}
+
+# Helper function: Get Trello ID from current branch
+get_trello_id() {
+    local branch_name=$(git branch --show-current)
+    local trello_id=$(echo "$branch_name" | grep -Eo '[a-f0-9]{24}' | head -1)
+
+    if [ -z "$trello_id" ]; then
+        log_message "ERROR" "Could not find a 24-character Trello ID in branch name ($branch_name)."
+        exit 1
+    fi
+    echo "$trello_id"
+}
+
+# Command: COMMENT
+trello_comment() {
+    log_message "DEBUG" "Initiating 'comment' command..."
+    local trello_id=$(get_trello_id)
+    local branch_name=$(git branch --show-current)
+
+    # Attempt to build Bitbucket link
+    local remote_url=$(git config --get remote.origin.url)
+    local repo_path=$(echo "$remote_url" | sed -e 's/.*bitbucket.org[:/]//' -e 's/\.git$//')
+    local branch_link
+    if [ -n "$repo_path" ]; then
+        branch_link="https://bitbucket.org/${repo_path}/branch/${branch_name}"
+    else
+        branch_link="*(Could not determine Bitbucket URL)*"
+    fi
+
+    local comment_text="$*"
+    if [ -z "$comment_text" ]; then
+        read -p "Enter your comment for the Trello card (Use @username to mention): " comment_text
+    fi
+
+    if [ -z "$comment_text" ]; then
+        log_message "ERROR" "Aborted: Comment cannot be empty."
+        exit 1
+    fi
+
+    local final_message="$comment_text\n\n🔗 **Branch:** [$branch_name]($branch_link)"
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "\n\033[0;35m--- DRY RUN: Simulated Execution ---\033[0m"
+        echo "Target Card ID: $trello_id"
+        echo -e "Comment Payload:\n$final_message"
+        run_cmd "Post Comment" "curl -s -X POST 'https://api.trello.com/1/cards/$trello_id/actions/comments...'"
+        exit 0
+    fi
+
+    log_message "DEBUG" "Posting comment to Trello card $trello_id..."
+
+    # Capture HTTP status code alongside the response body
+    local response=$(curl -s -w "\n%{http_code}" -X POST -G "https://api.trello.com/1/cards/$trello_id/actions/comments" \
+         --data-urlencode "text=$final_message" -d "key=$API_KEY" -d "token=$TOKEN")
+
+    local status=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+
+    handle_api_response "$status" "$body" "Post Comment"
+    echo "✅ Success! Your comment is posted."
+}
+
+# Command: MEMBERS
+trello_members() {
+    log_message "DEBUG" "Initiating 'members' command..."
+    local trello_id=$(get_trello_id)
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "\n\033[0;35m--- DRY RUN: Simulated Execution ---\033[0m"
+        echo "Target Card ID: $trello_id"
+        run_cmd "Fetch Members" "curl -s -X GET 'https://api.trello.com/1/cards/$trello_id?members=true...'"
+        exit 0
+    fi
+
+    log_message "DEBUG" "Fetching members for Trello card $trello_id..."
+
+    local response=$(curl -s -w "\n%{http_code}" -X GET "https://api.trello.com/1/cards/$trello_id?members=true&key=$API_KEY&token=$TOKEN")
+
+    local status=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+
+    handle_api_response "$status" "$body" "Fetch Members"
+
+    local members=$(echo "$body" | jq -r '.members[]? | "@" + .username + " (" + .fullName + ")"')
+
+    if [ -z "$members" ]; then
+        echo "No members are currently assigned to this card."
+    else
+        echo -e "\nAssigned Members to mention:"
+        echo "$members"
+    fi
+}
+
+trello_clean_logs() {
+    local days=${1:-7}
+    echo "Cleaning logs older than $days days..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        find "$HOME" -name ".git-trello.log" -mtime +"$days"d -delete 2>/dev/null || true
+    else
+        find "$HOME" -name ".git-trello.log" -mtime +"$days" -delete 2>/dev/null || true
+    fi
+    [ "$days" -eq 0 ] && > "$LOG_FILE"
+    echo "Maintenance complete."
+}
+
+check_for_updates() {
+    # Define where to store the timestamp
+    local last_check_file="$HOME/.git-trello.lastcheck"
+    local current_date=$(date +%Y-%m-%d)
+
+    # If we already checked today, exit the function instantly
+    if [[ -f "$last_check_file" ]] && [[ "$(cat "$last_check_file")" == "$current_date" ]]; then
+        return 0
+    fi
+
+    # Fetch the latest version from your raw GitHub URL
+    # --max-time 2 ensures it gives up immediately if the internet is slow/down
+    local remote_version=$(curl -s --max-time 2 "https://raw.githubusercontent.com/YOUR_USERNAME/git-trello-tool/main/version.txt")
+
+    # Clean up whitespace/newlines just in case
+    remote_version=$(echo "$remote_version" | tr -d '[:space:]')
+
+    # Compare versions
+    if [[ -n "$remote_version" ]] && [[ "$remote_version" != "$CURRENT_VERSION" ]]; then
+        echo -e "\033[1;33m===================================================\033[0m"
+        echo -e "\033[1;33m🚀 Update Available for Git-Trello Tool!\033[0m"
+        echo -e "\033[0;33m   You are running v$CURRENT_VERSION, but v$remote_version is out.\033[0m"
+        echo -e "\033[0;33m   To update, run the install command from your repo root:\033[0m"
+        echo -e "\033[0;36m   curl -s https://raw.githubusercontent.com/YOUR_USERNAME/git-trello-tool/main/install.sh | bash\033[0m"
+        echo -e "\033[1;33m===================================================\n\033[0m"
+    fi
+
+    # Record that we checked today so we don't bother them again until tomorrow
+    echo "$current_date" > "$last_check_file"
+}
+
+# Run the lightning-fast update check
+check_for_updates
+
+case "$1" in
+    start)      trello_start ;;
+    comment)    shift; trello_comment "$@" ;;
+    members)    trello_members ;;
+    clean-logs) shift; trello_clean_logs "$1" ;;
+    *)
+        echo "Git-Trello (v$CURRENT_VERSION)"
+        echo "Usage: git trello <command> [--dry-run] [--debug]"
+        echo "Commands:"
+        echo "  start            Create a new card and branch"
+        echo "  comment [msg]    Add a comment (and Bitbucket link) to the current card"
+        echo "  members          List assigned members and their @usernames"
+        echo "  clean-logs       Remove old log files"
+        ;;
+esac
