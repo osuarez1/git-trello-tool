@@ -1,0 +1,32 @@
+#!/bin/bash
+# Enforces that all pushed feature/bugfix branches contain a valid Trello ID.
+
+# Define base branches that don't need Trello IDs (pipe-separated)
+PROTECTED_BRANCHES="^(main|master|develop|dev|staging|release)$"
+
+# Read the push input from Git
+while read local_ref local_sha remote_ref remote_sha; do
+
+    # Extract the actual branch name (removes 'refs/heads/')
+    BRANCH_NAME=${local_ref#refs/heads/}
+
+    # Allow base/protected branches to be pushed without an ID
+    if [[ "$BRANCH_NAME" =~ $PROTECTED_BRANCHES ]]; then
+        continue
+    fi
+
+    # Check for the 24-character Trello ID
+    TRELLO_ID=$(echo "$BRANCH_NAME" | grep -Eo '[a-f0-9]{24}' | head -1)
+
+    if [ -z "$TRELLO_ID" ]; then
+        echo -e "\033[0;31m🛑 [Git-Trello Hook] Push Rejected.\033[0m"
+        echo -e "\033[0;33mBranch '$BRANCH_NAME' does not contain a 24-character Trello ID.\033[0m"
+        echo "Please use the 'git ts' command to create valid branches, or rename this branch."
+        exit 1
+    fi
+
+    echo -e "\033[0;32m✅ [Git-Trello Hook] Valid Trello ID found. Proceeding with push...\033[0m"
+
+done
+
+exit 0
