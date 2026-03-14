@@ -22,8 +22,8 @@ pipelines:
                 -d "token=$TRELLO_TOKEN"
             - echo "✅ Card moved to Ready for Staging."
 
-    # 2. PR submitted targeting 'main' -> Move to "Ready for Production"
-    'main':
+    # 2. PR submitted targeting 'master' -> Move to "Ready for Production"
+    'master':
       - step:
           name: Branch Validation & Move to Ready for Production
           script:
