@@ -7,7 +7,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 SECRETS_FILE="$HOME/.trello_secrets"
-REPO_URL="https://raw.githubusercontent.com/YOUR_USERNAME/git-trello-tool/main"
+REPO_URL="https://raw.githubusercontent.com/osuarez1/git-trello-tool/main"
 
 echo -e "${BLUE}🚀 Starting Git-Trello Installation...${NC}"
 
