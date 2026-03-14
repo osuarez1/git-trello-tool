@@ -1,0 +1,61 @@
+#!/bin/bash
+# post-commit hook: Sends commit details and moves the card to "Doing"
+
+# 1. Load your Trello API credentials
+SECRETS_FILE="$HOME/.trello_secrets"
+if [ -f "$SECRETS_FILE" ]; then
+    source "$SECRETS_FILE"
+else
+    # Fail silently so we don't block the user's workflow if secrets are missing
+    exit 0
+fi
+
+# 2. Extract the 24-character Trello ID from the branch name
+BRANCH_NAME=$(git branch --show-current)
+TRELLO_ID=$(echo "$BRANCH_NAME" | grep -Eo '[a-f0-9]{24}' | head -1)
+
+# If this branch isn't linked to a Trello card, do nothing and exit cleanly
+if [ -z "$TRELLO_ID" ]; then
+    exit 0
+fi
+
+# ==========================================
+# ACTION 1: Move Card to "Doing"
+# ==========================================
+if [ -n "$TARGET_DOING_LIST_ID" ]; then
+    curl -s -X PUT "https://api.trello.com/1/cards/$TRELLO_ID" \
+         -d "idList=$TARGET_DOING_LIST_ID" \
+         -d "key=$API_KEY" \
+         -d "token=$TOKEN" > /dev/null
+fi
+
+# ==========================================
+# ACTION 2: Post Commit Stats to Card
+# ==========================================
+
+# 3. Gather the commit details
+COMMIT_HASH=$(git rev-parse --short HEAD)
+COMMIT_MSG=$(git log -1 --pretty=%B)
+
+# Get the file stats (e.g., "1 file changed, 2 insertions(+), 1 deletion(-)")
+# We use 'tail -n +2' to strip out the commit hash/author header so it's just the clean stats
+COMMIT_STATS=$(git show --stat --oneline | tail -n +2)
+
+# 4. Format the Trello comment using Markdown
+COMMENT_TEXT="**💾 New Commit Created:** \`$COMMIT_HASH\`
+
+**Message:**
+> $COMMIT_MSG
+
+**Changes:**
+\`\`\`text
+$COMMIT_STATS
+\`\`\`"
+
+# 5. Send the payload to the Trello API silently
+curl -s -X POST -G "https://api.trello.com/1/cards/$TRELLO_ID/actions/comments" \
+     --data-urlencode "text=$COMMENT_TEXT" \
+     -d "key=$API_KEY" \
+     -d "token=$TOKEN" > /dev/null
+# Print a tiny success message to the terminal so the user knows it worked
+echo -e "\033[0;32m✅ Commit logged and card moved to 'Doing' in Trello!\033[0m"
