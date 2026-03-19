@@ -95,7 +95,8 @@ trello_start() {
 
     read -p "Enter Task Title: " CARD_TITLE
 
-    read -p "Enter Task Description: " CARD_DESC
+    echo "Enter Task Description (Press Ctrl+D when finished):"
+    CARD_DESC=$(cat)
 
     # Detect Language
     DETECTED_LANG="Unknown"
@@ -137,7 +138,7 @@ trello_start() {
         exit 0
     fi
 
-    DESCRIPTION=$(echo -e "${TASK_DESC}\n\n**Language:** $DETECTED_LANG")
+    DESCRIPTION=$(echo -e "${CARD_DESC}\n\n**Language:** $DETECTED_LANG")
 
     # Create Card (Assuming $TARGET_LIST_ID is configured in secrets for simplicity)
     CREATE_RESP=$(curl -s -w "\n%{http_code}" -X POST \
@@ -345,7 +346,7 @@ case "$1" in
     start)      trello_start ;;
     comment|tc) shift; trello_comment "$@" ;;
     members|tm) trello_members ;;
-    uninstall)  trello_uninstall ;; # <--- Add this line
+    uninstall)  trello_uninstall ;;
     help|-h|--help|"")
         echo -e "${BLUE}Git-Trello Tooling (v$CURRENT_VERSION)${NC}"
                 echo -e "Usage: git trello <command> [options]\n"
