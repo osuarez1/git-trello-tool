@@ -46,6 +46,7 @@ echo -e "${GREEN}✅ Download complete.${NC}"
 # --- 3. GIT CONFIGURATION ---
 echo -e "\n${BLUE}Configuring local Git repository...${NC}"
 git config core.hooksPath .git-trello/hooks
+git config alias.trello "!$(pwd)/.git-trello/bin/git-trello"
 git config alias.ts "!$(pwd)/.git-trello/bin/git-trello start"
 git config alias.tc "!$(pwd)/.git-trello/bin/git-trello comment"
 git config alias.tm "!$(pwd)/.git-trello/bin/git-trello members"
