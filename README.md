@@ -105,6 +105,7 @@ Moves the Trello card linked to your current branch back to the "To Do" list and
 
 ### `git tl` (Trello List)
 Fetches and displays all cards currently sitting in your configured "To Do" list. It prints the 24-character Card IDs in yellow so you can easily copy them to use with the `git tb` command.
+
 ---
 
 ## 🤝 Contributing & License
