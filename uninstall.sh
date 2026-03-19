@@ -11,6 +11,7 @@ fi
 
 # Unset Git configs
 git config --unset core.hooksPath
+git config --unset alias.trello
 git config --unset alias.ts
 git config --unset alias.tc
 git config --unset alias.tm
