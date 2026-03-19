@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-03-19
+
+### Fixed
+- **Command Routing:** Added a master Git alias (`alias.trello`) so that running explicit commands like `git trello help` or `git trello start` routes correctly to the script instead of throwing an unknown Git command error.
+- **Uninstaller Cleanup:** Updated both the standalone `uninstall.sh` and the internal `trello_uninstall` function to properly clean up the new master alias.
+
 
 ## [1.1.0] - 2026-03-19
 
