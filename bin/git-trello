@@ -10,7 +10,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-CURRENT_VERSION="1.1.0"
+CURRENT_VERSION="1.1.1"
 
 # ==========================================
 #        CONFIGURATION & LOGGING
