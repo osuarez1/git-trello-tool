@@ -49,6 +49,10 @@ git config core.hooksPath .git-trello/hooks
 git config alias.ts "!$(pwd)/.git-trello/bin/git-trello start"
 git config alias.tc "!$(pwd)/.git-trello/bin/git-trello comment"
 git config alias.tm "!$(pwd)/.git-trello/bin/git-trello members"
+git config alias.td "!$(pwd)/.git-trello/bin/git-trello doing"
+git config alias.tt "!$(pwd)/.git-trello/bin/git-trello todo"
+git config alias.tb "!$(pwd)/.git-trello/bin/git-trello branch"
+git config alias.tl "!$(pwd)/.git-trello/bin/git-trello list"
 echo -e "${GREEN}✅ Aliases and hooks configured.${NC}"
 
 # --- 4. GITIGNORE SETUP ---

@@ -14,6 +14,10 @@ git config --unset core.hooksPath
 git config --unset alias.ts
 git config --unset alias.tc
 git config --unset alias.tm
+git config --unset alias.td
+git config --unset alias.tt
+git config --unset alias.tb
+git config --unset alias.tl
 echo "✅ Unset Git aliases and hooks."
 
 # Clean up .gitignore

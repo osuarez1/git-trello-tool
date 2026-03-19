@@ -21,7 +21,7 @@ while read local_ref local_sha remote_ref remote_sha; do
     if [ -z "$TRELLO_ID" ]; then
         echo -e "\033[0;31m🛑 [Git-Trello Hook] Push Rejected.\033[0m"
         echo -e "\033[0;33mBranch '$BRANCH_NAME' does not contain a 24-character Trello ID.\033[0m"
-        echo "Please use the 'git ts' command to create valid branches, or rename this branch."
+        echo "Please use the 'git ts' or 'git tb' commands to create valid branches, or rename this branch."
         exit 1
     fi
 
