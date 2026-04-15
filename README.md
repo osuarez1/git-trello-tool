@@ -107,6 +107,24 @@ Moves the Trello card linked to your current branch back to the "To Do" list and
 Fetches and displays all cards currently sitting in your configured "To Do" list. It prints the 24-character Card IDs in yellow so you can easily copy them to use with the `git tb` command.
 ---
 
+## 🔢 Versioning
+
+`bin/git-trello` is the canonical source of the release version through `CURRENT_VERSION`.
+
+Use the helper script to keep `version.txt` synchronized:
+
+```bash
+# Check if version.txt matches CURRENT_VERSION
+bash scripts/sync-version.sh --check
+
+# Update version.txt from CURRENT_VERSION
+bash scripts/sync-version.sh --write
+```
+
+CI uses the same script to avoid version drift.
+
+---
+
 ## 🤝 Contributing & License
 
 This project is licensed under the GNU General Public License v2.0 (GPL-v2). Feel free to fork, modify, and submit pull requests!
