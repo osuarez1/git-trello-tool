@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-04-15
+
+### Added
+- **Version Sync Script:** Added `scripts/sync-version.sh` as the single helper for printing, checking, and syncing project version metadata from `bin/git-trello`.
+
+### Changed
+- **Release Automation:** Updated `.github/workflows/auto-version.yml` to use `scripts/sync-version.sh` for version extraction and `version.txt` synchronization, making release version flow explicit and consistent.
+- **Version Bump:** Updated `CURRENT_VERSION` in `bin/git-trello` and synchronized `version.txt` to `1.1.2`.
+
+### Documentation
+- **Versioning Guide:** Added README documentation for the new script-based versioning workflow and canonical version source.
+
+### Chore
+- **Git Ignore Rules:** Added markdown convention artifact to ignore rules for cleaner repository status.
+
 ## [1.1.1] - 2026-03-19
 
 ### Fixed

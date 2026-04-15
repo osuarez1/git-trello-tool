@@ -19,15 +19,19 @@ jobs:
         with:
           fetch-depth: 0 # CRITICAL: Fetches all history so we can check existing tags
 
+      - name: Verify version source of truth
+        run: |
+          bash scripts/sync-version.sh --check
+
       - name: Extract version from script
         id: get_version
         run: |
-          VERSION=$(grep -Po 'CURRENT_VERSION="\K[^"]+' bin/git-trello)
+          VERSION=$(bash scripts/sync-version.sh --print)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Update version.txt
         run: |
-          echo "${{ env.VERSION }}" > version.txt
+          bash scripts/sync-version.sh --write
 
       - name: Commit and push changes
         run: |
