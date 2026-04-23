@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-04-23
+
+### Added
+- **Git-Trello Coverage Harness:** Added `tests/git-trello-coverage.sh` with deterministic stubs and trace-based assertions to exercise command routing, API error handling, dry-run behavior, interactive flows, update checks, and uninstall paths for `bin/git-trello`.
+
+### Changed
+- **CI Coverage Gate:** Updated `.github/workflows/auto-version.yml` to enforce 100% line coverage for both `scripts/sync-version.sh` and `bin/git-trello` on pull requests, including workflow trigger paths for the new coverage test.
+- **Version Bump:** Updated `CURRENT_VERSION` in `bin/git-trello` and synchronized `version.txt` to `1.1.4`.
+
+### Documentation
+- **Testing Docs:** Updated README with local coverage commands for both coverage harnesses and clarified that CI enforces both checks to prevent regressions.
+
 ## [1.1.3] - 2026-04-23
 
 ### Fixed
