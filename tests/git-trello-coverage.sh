@@ -61,7 +61,9 @@ assert_contains() {
     local file="$1"
     local expected="$2"
     local context="$3"
-    if ! rg -F --quiet -- "${expected}" "${file}"; then
+    local content
+    content="$(<"${file}")"
+    if [[ "${content}" != *"${expected}"* ]]; then
         echo "---- ${file} ----" >&2
         cat "${file}" >&2
         fail "${context}: expected '${expected}'"
