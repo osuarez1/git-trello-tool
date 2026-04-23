@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-04-23
+
+### Fixed
+- **Release Trigger Branch:** Updated `.github/workflows/auto-version.yml` to trigger release automation on `main` so version sync and release creation run on the repository default branch.
+- **Path Robustness:** Updated `scripts/sync-version.sh` to resolve `bin/git-trello` and `version.txt` from repo-root paths derived from script location, allowing reliable execution from any working directory.
+
+### Changed
+- **Workflow Job Split:** Split release automation into `validate-version` (PR checks) and `sync-and-release` (main branch sync/release) to preserve fail-fast validation in PRs while keeping main branch self-healing behavior.
+
+### Test
+- **Non-root Invocation Guardrail:** Added CI validation that executes version checks from non-root directories (`scripts/` and `/tmp`) to prevent regressions in path handling.
+
 ## [1.1.2] - 2026-04-15
 
 ### Added
