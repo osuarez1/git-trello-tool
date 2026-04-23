@@ -123,6 +123,20 @@ bash scripts/sync-version.sh --write
 
 CI uses the same script to avoid version drift.
 
+## ✅ Test Coverage Gates
+
+CI enforces 100% line coverage for the Bash automation scripts that control versioning and Trello workflow operations:
+
+```bash
+# Enforce coverage for scripts/sync-version.sh
+bash tests/sync-version-coverage.sh
+
+# Enforce coverage for bin/git-trello
+bash tests/git-trello-coverage.sh
+```
+
+Both checks run in the `validate-version` workflow job for pull requests touching related files.
+
 ---
 
 ## 🤝 Contributing & License
