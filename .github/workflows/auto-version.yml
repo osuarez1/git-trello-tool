@@ -8,6 +8,8 @@ on:
       - 'bin/git-trello'
       - 'version.txt'
       - 'scripts/sync-version.sh'
+      - 'tests/sync-version-coverage.sh'
+      - '.github/workflows/auto-version.yml'
   push:
     branches:
       - main
@@ -26,6 +28,10 @@ jobs:
       - name: Verify version source of truth
         run: |
           bash scripts/sync-version.sh --check
+
+      - name: Enforce 100% coverage for sync-version script
+        run: |
+          bash tests/sync-version-coverage.sh
 
       - name: Verify sync script from non-root directories
         run: |
