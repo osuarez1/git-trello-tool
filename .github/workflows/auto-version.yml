@@ -27,6 +27,17 @@ jobs:
         run: |
           bash scripts/sync-version.sh --check
 
+      - name: Verify sync script from non-root directories
+        run: |
+          (
+            cd scripts
+            bash sync-version.sh --check
+          )
+          (
+            cd /tmp
+            bash "$GITHUB_WORKSPACE/scripts/sync-version.sh" --check
+          )
+
   sync-and-release:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
