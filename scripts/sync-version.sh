@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT_PATH="bin/git-trello"
-VERSION_FILE="version.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+SCRIPT_PATH="${REPO_ROOT}/bin/git-trello"
+VERSION_FILE="${REPO_ROOT}/version.txt"
 
 usage() {
     echo "Usage: scripts/sync-version.sh [--print|--write|--check]"
@@ -13,6 +16,10 @@ usage() {
 
 extract_script_version() {
     local version
+    if [ ! -r "$SCRIPT_PATH" ]; then
+        echo "Error: Version source file not found or unreadable: ${SCRIPT_PATH}" >&2
+        exit 1
+    fi
     version=$(sed -n 's/^CURRENT_VERSION="\([^"]*\)"/\1/p' "$SCRIPT_PATH")
     if [ -z "${version}" ]; then
         echo "Error: Could not extract CURRENT_VERSION from ${SCRIPT_PATH}" >&2
@@ -48,7 +55,7 @@ case "$MODE" in
             echo "Version mismatch detected:"
             echo "  ${SCRIPT_PATH}: ${script_version}"
             echo "  ${VERSION_FILE}: ${file_version:-<missing>}"
-            echo "Run: scripts/sync-version.sh --write"
+            echo "Run: bash \"${SCRIPT_DIR}/sync-version.sh\" --write"
             exit 1
         fi
         echo "Version files are in sync (${script_version})"
