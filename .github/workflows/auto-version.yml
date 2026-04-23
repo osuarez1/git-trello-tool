@@ -3,7 +3,7 @@ name: Sync Version & Create Release
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - 'bin/git-trello' # Only run when the main script changes
 
