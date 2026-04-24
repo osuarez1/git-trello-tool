@@ -14,7 +14,7 @@ Use Conventional Commits:
 
 Format:
 
-```Bash 
+```text
 <type>(scope): short imperative summary
 
 [optional body]
@@ -22,32 +22,38 @@ Format:
 [optional footer(s)]
 ```
 
-Simple Commit Examples:
+Simple commit examples:
 
 - `ci(version): split validation from sync/release workflow`
 - `docs(conventions): add commit and PR conventions`
 
 **Example of a complex commit:**
- ```text
- feat(hooks): add pre-push validation for branch names
- 
- - Created a regex pattern to scan for 24-character Trello IDs.
- - Added logic to skip validation on protected branches (main, dev).
- - Set script to exit 1 if validation fails to block the push.
- 
- Resolves #42
- ```
+
+```text
+feat(hooks): add pre-push validation for branch names
+
+- Created a regex pattern to scan for 24-character Trello IDs.
+- Added logic to skip validation on protected branches (main, dev).
+- Set script to exit 1 if validation fails to block the push.
+
+Resolves #42
+```
 
 ## Pull Request Convention
 
-PR title should follow the same Conventional Commit style as the primary commit.
-* *Example:* `feat(cli): introduce task branching and list management commands`
+### PR title
 
-#### B. The PR Body / Description
-It should answer three main questions: 
-* What changed? 
-* Why did it change? 
-* How do I test it?
+Use the same Conventional Commit style as the primary commit.
+
+**Example:** `feat(cli): introduce task branching and list management commands`
+
+### PR description
+
+It should answer three main questions:
+
+- What changed?
+- Why did it change?
+- How do I test it?
 
 A standard PR template includes:
 1. **Overview/Context:** A brief paragraph explaining the purpose of the PR.
