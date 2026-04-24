@@ -76,21 +76,18 @@ run_traced() {
     shift 2
 
     LAST_STDOUT="${TMP_DIR}/${name}.stdout"
-    LAST_STDERR="${TMP_DIR}/${name}.stderr"
     LAST_TRACE="${TRACE_DIR}/${name}.trace"
 
     set +e
     (
         cd "${cwd}"
-        exec 9>"${LAST_TRACE}"
-        export BASH_XTRACEFD=9
         export PS4='+${BASH_SOURCE}:${LINENO}:'
         export HOME="${TEST_HOME}"
         export PATH="${STUB_BIN}:${PATH}"
         export MOCK_CURL_QUEUE_FILE="${CURL_QUEUE_FILE}"
         export MOCK_GIT_STATE_FILE
         bash -x "${TARGET_SCRIPT}" "$@"
-    ) >"${LAST_STDOUT}" 2>"${LAST_STDERR}"
+    ) >"${LAST_STDOUT}" 2>"${LAST_TRACE}"
     LAST_STATUS=$?
     set -e
 }
@@ -102,21 +99,18 @@ run_traced_with_input() {
     shift 3
 
     LAST_STDOUT="${TMP_DIR}/${name}.stdout"
-    LAST_STDERR="${TMP_DIR}/${name}.stderr"
     LAST_TRACE="${TRACE_DIR}/${name}.trace"
 
     set +e
     printf "%b" "${input_data}" | (
         cd "${cwd}"
-        exec 9>"${LAST_TRACE}"
-        export BASH_XTRACEFD=9
         export PS4='+${BASH_SOURCE}:${LINENO}:'
         export HOME="${TEST_HOME}"
         export PATH="${STUB_BIN}:${PATH}"
         export MOCK_CURL_QUEUE_FILE="${CURL_QUEUE_FILE}"
         export MOCK_GIT_STATE_FILE
         bash -x "${TARGET_SCRIPT}" "$@"
-    ) >"${LAST_STDOUT}" 2>"${LAST_STDERR}"
+    ) >"${LAST_STDOUT}" 2>"${LAST_TRACE}"
     LAST_STATUS=$?
     set -e
 }
@@ -127,14 +121,11 @@ run_traced_snippet() {
     local snippet="$3"
 
     LAST_STDOUT="${TMP_DIR}/${name}.stdout"
-    LAST_STDERR="${TMP_DIR}/${name}.stderr"
     LAST_TRACE="${TRACE_DIR}/${name}.trace"
 
     set +e
     (
         cd "${cwd}"
-        exec 9>"${LAST_TRACE}"
-        export BASH_XTRACEFD=9
         export PS4='+${BASH_SOURCE}:${LINENO}:'
         export HOME="${TEST_HOME}"
         export PATH="${STUB_BIN}:${PATH}"
@@ -142,7 +133,7 @@ run_traced_snippet() {
         export MOCK_GIT_STATE_FILE
         export TEST_SNIPPET="${snippet}"
         bash -x -c 'set -- help; source "'"${TARGET_SCRIPT}"'"; eval "$TEST_SNIPPET"'
-    ) >"${LAST_STDOUT}" 2>"${LAST_STDERR}"
+    ) >"${LAST_STDOUT}" 2>"${LAST_TRACE}"
     LAST_STATUS=$?
     set -e
 }
@@ -494,8 +485,8 @@ assert_status 0 "${LAST_STATUS}" "direct function calls should succeed"
 assert_contains "${LAST_STDOUT}" "direct-command-ran" "run_cmd non-dry output"
 assert_contains "${LAST_STDOUT}" "Cleaning logs older than 0 days..." "clean logs zero-day output"
 
-mapfile -t COVERABLE_LINES < <(
-    awk '
+COVERABLE_FILE="${TMP_DIR}/coverable-lines.txt"
+awk '
     BEGIN { continuation = 0 }
     {
         raw = $0
@@ -531,22 +522,18 @@ mapfile -t COVERABLE_LINES < <(
         } else {
             continuation = 0
         }
-    }' "${TARGET_SCRIPT}"
-)
+    }' "${TARGET_SCRIPT}" | sort -n >"${COVERABLE_FILE}"
 
-declare -A COVERED_MAP=()
-while IFS= read -r line; do
-    COVERED_MAP["${line}"]=1
-done < <(awk -F: '/git-trello:[0-9]+:/{print $2}' "${TRACE_DIR}"/*.trace | sort -n -u)
+COVERED_FILE="${TMP_DIR}/covered-lines.txt"
+awk -F: '/git-trello:[0-9]+:/{print $2}' "${TRACE_DIR}"/*.trace | sort -n -u >"${COVERED_FILE}"
 
 declare -a MISSING_LINES=()
-for line in "${COVERABLE_LINES[@]}"; do
-    if [ -z "${COVERED_MAP[${line}]:-}" ]; then
-        MISSING_LINES+=("${line}")
-    fi
-done
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "${line}" ]] && continue
+    MISSING_LINES+=("${line}")
+done < <(comm -23 "${COVERABLE_FILE}" "${COVERED_FILE}")
 
-TOTAL_LINES="${#COVERABLE_LINES[@]}"
+TOTAL_LINES="$(wc -l <"${COVERABLE_FILE}" | awk '{ print $1 }')"
 COVERED_LINES_COUNT=$((TOTAL_LINES - ${#MISSING_LINES[@]}))
 COVERAGE_PERCENT=$((COVERED_LINES_COUNT * 100 / TOTAL_LINES))
 

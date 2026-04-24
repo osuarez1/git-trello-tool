@@ -10,6 +10,10 @@ on:
       - 'scripts/sync-version.sh'
       - 'tests/git-trello-coverage.sh'
       - 'tests/sync-version-coverage.sh'
+      - 'tests/cli-tests.sh'
+      - 'CLAUDE.md'
+      - 'CONVENTION.md'
+      - 'README.md'
       - '.github/workflows/auto-version.yml'
   push:
     branches:
@@ -37,6 +41,10 @@ jobs:
       - name: Enforce 100% coverage for git-trello script
         run: |
           bash tests/git-trello-coverage.sh
+
+      - name: Run CLI integration tests
+        run: |
+          bash tests/cli-tests.sh
 
       - name: Verify sync script from non-root directories
         run: |
