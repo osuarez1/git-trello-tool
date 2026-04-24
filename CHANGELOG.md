@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-04-23
+
+### Added
+- **CLAUDE.md:** Added repository guidance file documenting commands, architecture, version pipeline, coverage harness design, and CI workflow for Claude Code sessions.
+- **CLI Integration Tests:** Added `tests/cli-tests.sh` with integration tests covering version sync consistency, pre-push branch validation rules, and prepare-commit-msg idempotent card ID injection.
+
+### Documentation
+- **Conventions:** Expanded `CONVENTION.md` commit format to include optional body/footer fields and reworked the PR description template with Overview, Testing Instructions, Related Tickets, and additional checklist items.
+
 ## [1.1.4] - 2026-04-23
 
 ### Added
