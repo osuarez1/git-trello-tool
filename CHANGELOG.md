@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.5] - 2026-04-23
+## [1.1.5] - 2026-04-24
 
 ### Added
 - **CLAUDE.md:** Added repository guidance file documenting commands, architecture, version pipeline, coverage harness design, and CI workflow for Claude Code sessions.
 - **CLI Integration Tests:** Added `tests/cli-tests.sh` with integration tests covering version sync consistency, pre-push branch validation rules, and prepare-commit-msg idempotent card ID injection.
+
+### Changed
+- **CI path filters:** Pull-request validation now runs when `CLAUDE.md`, `CONVENTION.md`, or `README.md` change, so documentation-only PRs still hit version and coverage checks when appropriate.
+
+### Fixed
+- **Coverage harnesses (macOS / Bash 3.2):** Removed Bash 4–only constructs (`mapfile`, associative arrays). Routed `bash -x` trace lines to each scenario’s trace file via stderr (instead of `BASH_XTRACEFD`, which Bash 3.2 ignores), and compute uncovered lines with sorted lists and `comm -23`. Replaced GNU-only `sed -i` in `tests/sync-version-coverage.sh` with a temp-file rewrite for the missing-`CURRENT_VERSION` scenario.
 
 ### Documentation
 - **Conventions:** Expanded `CONVENTION.md` commit format to include optional body/footer fields and reworked the PR description template with Overview, Testing Instructions, Related Tickets, and additional checklist items.
