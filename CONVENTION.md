@@ -14,23 +14,50 @@ Use Conventional Commits:
 
 Format:
 
-`<type>(optional-scope): short imperative summary`
+```Bash 
+<type>(scope): short imperative summary
 
-Examples:
+[optional body]
+
+[optional footer(s)]
+```
+
+Simple Commit Examples:
 
 - `ci(version): split validation from sync/release workflow`
 - `docs(conventions): add commit and PR conventions`
 
+**Example of a complex commit:**
+ ```text
+ feat(hooks): add pre-push validation for branch names
+ 
+ - Created a regex pattern to scan for 24-character Trello IDs.
+ - Added logic to skip validation on protected branches (main, dev).
+ - Set script to exit 1 if validation fails to block the push.
+ 
+ Resolves #42
+ ```
+
 ## Pull Request Convention
 
 PR title should follow the same Conventional Commit style as the primary commit.
+* *Example:* `feat(cli): introduce task branching and list management commands`
 
-PR description should include:
+#### B. The PR Body / Description
+It should answer three main questions: 
+* What changed? 
+* Why did it change? 
+* How do I test it?
 
-1. **Summary**: what changed and why
-2. **Testing**: how it was validated
-3. **Risk/Impact**: behavior changes or rollout notes
-4. **Checklist**:
+A standard PR template includes:
+1. **Overview/Context:** A brief paragraph explaining the purpose of the PR.
+2. **Summary of Changes:** A bulleted list of the major additions, removals, or fixes.
+3. **Testing Instructions:** Step-by-step instructions so the reviewer can pull down the branch and verify the code works as intended.
+4. **Risk/Impact**: behavior changes or rollout notes
+5. **Related Tickets:** Links to Trello cards for context if they are known.
+6. **Checklist:** A markdown checklist (`- [x]`) confirming the developer ran tests, updated documentation, and bumped the version number:
    - [ ] CI passes
    - [ ] Backward compatibility considered
+   - [ ] Bumped version number
+   - [ ] Updated CHANGELOG.md
    - [ ] Docs updated (if needed)
