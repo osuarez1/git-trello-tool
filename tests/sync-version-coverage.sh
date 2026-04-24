@@ -75,16 +75,13 @@ run_traced() {
     shift || true
 
     LAST_STDOUT="${TMP_DIR}/${name}.stdout"
-    LAST_STDERR="${TMP_DIR}/${name}.stderr"
     LAST_TRACE="${TRACE_DIR}/${name}.trace"
 
     set +e
     (
-        exec 9>"${LAST_TRACE}"
-        export BASH_XTRACEFD=9
         export PS4='+${BASH_SOURCE}:${LINENO}:'
         bash -x "${TARGET_SCRIPT}" "$@"
-    ) >"${LAST_STDOUT}" 2>"${LAST_STDERR}"
+    ) >"${LAST_STDOUT}" 2>"${LAST_TRACE}"
     LAST_STATUS=$?
     set -e
 }
@@ -132,15 +129,16 @@ assert_file_contains "${LAST_STDOUT}" "Usage: scripts/sync-version.sh [--print|-
 mv "${SOURCE_SCRIPT}" "${SOURCE_SCRIPT}.missing"
 run_traced "unreadable_source" --print
 assert_status 1 "${LAST_STATUS}" "unreadable source should fail"
-assert_file_contains "${LAST_STDERR}" "Error: Version source file not found or unreadable: ${SOURCE_SCRIPT}" "unreadable source error"
+assert_file_contains "${LAST_TRACE}" "Error: Version source file not found or unreadable: ${SOURCE_SCRIPT}" "unreadable source error"
 mv "${SOURCE_SCRIPT}.missing" "${SOURCE_SCRIPT}"
 restore_fixtures
 
 # Missing CURRENT_VERSION extraction branch.
-sed -i 's/^CURRENT_VERSION="[^"]*"/CURRENT_VER="broken"/' "${SOURCE_SCRIPT}"
+sed 's/^CURRENT_VERSION="[^"]*"/CURRENT_VER="broken"/' "${SOURCE_SCRIPT}" >"${TMP_DIR}/git-trello-sed-patch.$$" \
+    && mv "${TMP_DIR}/git-trello-sed-patch.$$" "${SOURCE_SCRIPT}"
 run_traced "missing_current_version" --print
 assert_status 1 "${LAST_STATUS}" "missing CURRENT_VERSION should fail"
-assert_file_contains "${LAST_STDERR}" "Error: Could not extract CURRENT_VERSION from ${SOURCE_SCRIPT}" "missing CURRENT_VERSION error"
+assert_file_contains "${LAST_TRACE}" "Error: Could not extract CURRENT_VERSION from ${SOURCE_SCRIPT}" "missing CURRENT_VERSION error"
 restore_fixtures
 
 declare -a COVERABLE_LINES=(
@@ -149,17 +147,17 @@ declare -a COVERABLE_LINES=(
     58 59 61 64 65
 )
 
-declare -A COVERED_MAP=()
-while IFS= read -r line; do
-    COVERED_MAP["${line}"]=1
-done < <(awk -F: '/sync-version\.sh:[0-9]+:/{print $2}' "${TRACE_DIR}"/*.trace | sort -n -u)
+COVERABLE_FILE="${TMP_DIR}/coverable-lines.txt"
+printf '%s\n' "${COVERABLE_LINES[@]}" | sort -n >"${COVERABLE_FILE}"
+
+COVERED_FILE="${TMP_DIR}/covered-lines.txt"
+awk -F: '/sync-version\.sh:[0-9]+:/{print $2}' "${TRACE_DIR}"/*.trace | sort -n -u >"${COVERED_FILE}"
 
 declare -a MISSING_LINES=()
-for line in "${COVERABLE_LINES[@]}"; do
-    if [ -z "${COVERED_MAP[${line}]:-}" ]; then
-        MISSING_LINES+=("${line}")
-    fi
-done
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "${line}" ]] && continue
+    MISSING_LINES+=("${line}")
+done < <(comm -23 "${COVERABLE_FILE}" "${COVERED_FILE}")
 
 TOTAL_LINES="${#COVERABLE_LINES[@]}"
 COVERED_LINES_COUNT=$((TOTAL_LINES - ${#MISSING_LINES[@]}))
