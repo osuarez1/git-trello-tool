@@ -34,15 +34,15 @@ if [ -f "$SECRETS_FILE" ]; then
 else
     SECRETS_SOURCE="environment variables"
 
-    API_KEY="${API_KEY:-${TRELLO_API_KEY:-}}"
-    TOKEN="${TOKEN:-${TRELLO_TOKEN:-}}"
-    TARGET_BOARD_ID="${TARGET_BOARD_ID:-${TRELLO_TARGET_BOARD_ID:-}}"
-    TARGET_LIST_ID="${TARGET_LIST_ID:-${TRELLO_TARGET_LIST_ID:-}}"
-    TARGET_DOING_LIST_ID="${TARGET_DOING_LIST_ID:-${TRELLO_TARGET_DOING_LIST_ID:-}}"
+    API_KEY="${TRELLO_API_KEY:-}"
+    TOKEN="${TRELLO_TOKEN:-}"
+    TARGET_BOARD_ID="${TRELLO_TARGET_BOARD_ID:-}"
+    TARGET_LIST_ID="${TRELLO_TARGET_LIST_ID:-}"
+    TARGET_DOING_LIST_ID="${TRELLO_TARGET_DOING_LIST_ID:-}"
 
     if [ -z "$API_KEY" ] || [ -z "$TOKEN" ]; then
         echo "Error: Trello secrets not found."
-        echo "Either create $SECRETS_FILE or set API_KEY and TOKEN (or TRELLO_API_KEY and TRELLO_TOKEN)."
+        echo "Either create $SECRETS_FILE or set TRELLO_API_KEY and TRELLO_TOKEN."
         exit 1
     fi
 fi

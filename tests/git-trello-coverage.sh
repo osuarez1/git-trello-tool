@@ -273,15 +273,15 @@ run_traced "missing_secrets" "${SCENARIO_DIR}" help
 assert_status 1 "${LAST_STATUS}" "missing secrets should fail"
 assert_contains "${LAST_STDOUT}" "Error: Trello secrets not found." "missing secrets message"
 
-# 1b) Missing secrets file but provided via same-name env vars.
+# 1b) Missing secrets file + generic env vars should NOT be supported.
 export API_KEY="key"
 export TOKEN="token"
 export TARGET_BOARD_ID="board123"
 export TARGET_LIST_ID="todo123"
 export TARGET_DOING_LIST_ID="doing123"
-run_traced "missing_secrets_env" "${SCENARIO_DIR}" help
-assert_status 0 "${LAST_STATUS}" "help should succeed with env secrets"
-assert_contains "${LAST_STDOUT}" "Usage: git trello <command> [options]" "help output with env secrets"
+run_traced "missing_secrets_env_generic" "${SCENARIO_DIR}" help
+assert_status 1 "${LAST_STATUS}" "generic env secrets should not be supported"
+assert_contains "${LAST_STDOUT}" "Either create ${TEST_HOME}/.trello_secrets or set TRELLO_API_KEY and TRELLO_TOKEN." "generic env secrets message"
 unset API_KEY TOKEN TARGET_BOARD_ID TARGET_LIST_ID TARGET_DOING_LIST_ID 2>/dev/null || true
 
 # 1c) Missing secrets file but provided via TRELLO_* env vars.
