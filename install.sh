@@ -7,6 +7,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 SECRETS_FILE="$HOME/.trello_secrets"
+ENV_HELPER_FILE="$HOME/.git-trello-env"
 REPO_URL="https://raw.githubusercontent.com/osuarez1/git-trello-tool/main"
 
 echo -e "${BLUE}🚀 Starting Git-Trello Installation...${NC}"
@@ -28,6 +29,38 @@ else
     chmod 600 "$SECRETS_FILE"
     echo -e "${GREEN}✅ Created $SECRETS_FILE. Please add your Trello keys after this install.${NC}"
 fi
+
+# --- 1b. OPTIONAL ENV HELPER (NAMESPACED VARS) ---
+# This helper lets sandboxed IDEs/CI inject Trello credentials via env vars
+# without requiring direct access to ~/.trello_secrets.
+cat > "$ENV_HELPER_FILE" <<'EOF'
+# ~/.git-trello-env
+# Source this file to export namespaced Trello env vars (TRELLO_*) from ~/.trello_secrets.
+#
+# Usage:
+#   source ~/.git-trello-env
+#
+# Add to your shell rc:
+#   source ~/.git-trello-env
+
+SECRETS_FILE="$HOME/.trello_secrets"
+if [ -f "$SECRETS_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$SECRETS_FILE"
+
+  export TRELLO_API_KEY="${API_KEY:-}"
+  export TRELLO_TOKEN="${TOKEN:-}"
+  export TRELLO_TARGET_BOARD_ID="${TARGET_BOARD_ID:-}"
+  export TRELLO_TARGET_LIST_ID="${TARGET_LIST_ID:-}"
+  export TRELLO_TARGET_DOING_LIST_ID="${TARGET_DOING_LIST_ID:-}"
+else
+  echo "git-trello: $SECRETS_FILE not found (cannot export TRELLO_* env vars)" >&2
+  return 1 2>/dev/null || exit 1
+fi
+EOF
+
+chmod 600 "$ENV_HELPER_FILE"
+echo -e "${GREEN}✅ Installed env helper at $ENV_HELPER_FILE${NC}"
 
 # --- 2. DOWNLOAD & FOLDER SETUP ---
 echo -e "\n${BLUE}Downloading latest scripts...${NC}"

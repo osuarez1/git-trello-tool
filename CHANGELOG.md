@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-05-07
+
+### Added
+- **Namespaced env helper:** Installer now writes `~/.git-trello-env`, which exports `TRELLO_*` variables from `~/.trello_secrets` for use in sandboxed IDE/CI environments.
+
+### Changed
+- **Secrets loading fallback:** When `~/.trello_secrets` is missing, `bin/git-trello` now reads Trello credentials from `TRELLO_*` environment variables (namespaced only).
+
+### Test
+- **Coverage harness:** Updated `tests/git-trello-coverage.sh` to cover env-var fallback behavior and assert generic (non-namespaced) env vars are rejected.
+
 ## [1.1.5] - 2026-04-24
 
 ### Added

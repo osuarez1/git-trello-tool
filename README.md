@@ -63,6 +63,30 @@ export TARGET_DOING_LIST_ID="your_doing_list_id"
 
 *(Because this file lives in your home directory, you only have to configure it once, and all your local repository installations will share it!)*
 
+### Using sandboxed IDEs / env-injected credentials
+Some environments (CI, devcontainers, sandboxed IDE terminals) prefer **injecting secrets via environment variables** instead of reading `~/.trello_secrets`.
+
+During install, Git-Trello writes an env helper to `~/.git-trello-env` that exports **namespaced** variables (`TRELLO_*`) from your `~/.trello_secrets`.
+
+To load these variables in your shell session:
+
+```bash
+source ~/.git-trello-env
+```
+
+To load them automatically in every terminal, add this to `~/.zshrc` or `~/.bashrc`:
+
+```bash
+source ~/.git-trello-env
+```
+
+The CLI supports env fallback using **only** these namespaced vars:
+- `TRELLO_API_KEY`
+- `TRELLO_TOKEN`
+- `TRELLO_TARGET_BOARD_ID`
+- `TRELLO_TARGET_LIST_ID`
+- `TRELLO_TARGET_DOING_LIST_ID`
+
 ### Finding Your Trello IDs via Terminal
 Instead of hunting through the Trello UI, you can find your Board and List IDs directly from the command line once your `API_KEY` and `TOKEN` are saved in your secrets file.
 
