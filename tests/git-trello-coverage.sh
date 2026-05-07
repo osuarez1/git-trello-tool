@@ -264,11 +264,37 @@ touch "${SCENARIO_DIR}/.gitignore"
 mkdir -p "${SCENARIO_DIR}/.git-trello"
 create_language_markers "${SCENARIO_DIR}"
 
-# 1) Missing secrets branch.
+# 1) Missing secrets branch (no file, no env).
 rm -f "${TEST_HOME}/.trello_secrets"
+unset API_KEY TOKEN TARGET_BOARD_ID TARGET_LIST_ID TARGET_DOING_LIST_ID \
+    TRELLO_API_KEY TRELLO_TOKEN TRELLO_TARGET_BOARD_ID TRELLO_TARGET_LIST_ID TRELLO_TARGET_DOING_LIST_ID \
+    2>/dev/null || true
 run_traced "missing_secrets" "${SCENARIO_DIR}" help
 assert_status 1 "${LAST_STATUS}" "missing secrets should fail"
-assert_contains "${LAST_STDOUT}" "Error: ~/.trello_secrets not found. Please run install.sh." "missing secrets message"
+assert_contains "${LAST_STDOUT}" "Error: Trello secrets not found." "missing secrets message"
+
+# 1b) Missing secrets file but provided via same-name env vars.
+export API_KEY="key"
+export TOKEN="token"
+export TARGET_BOARD_ID="board123"
+export TARGET_LIST_ID="todo123"
+export TARGET_DOING_LIST_ID="doing123"
+run_traced "missing_secrets_env" "${SCENARIO_DIR}" help
+assert_status 0 "${LAST_STATUS}" "help should succeed with env secrets"
+assert_contains "${LAST_STDOUT}" "Usage: git trello <command> [options]" "help output with env secrets"
+unset API_KEY TOKEN TARGET_BOARD_ID TARGET_LIST_ID TARGET_DOING_LIST_ID 2>/dev/null || true
+
+# 1c) Missing secrets file but provided via TRELLO_* env vars.
+export TRELLO_API_KEY="key"
+export TRELLO_TOKEN="token"
+export TRELLO_TARGET_BOARD_ID="board123"
+export TRELLO_TARGET_LIST_ID="todo123"
+export TRELLO_TARGET_DOING_LIST_ID="doing123"
+run_traced "missing_secrets_env_prefixed" "${SCENARIO_DIR}" help
+assert_status 0 "${LAST_STATUS}" "help should succeed with TRELLO_* env secrets"
+assert_contains "${LAST_STDOUT}" "Usage: git trello <command> [options]" "help output with TRELLO_* env secrets"
+unset TRELLO_API_KEY TRELLO_TOKEN TRELLO_TARGET_BOARD_ID TRELLO_TARGET_LIST_ID TRELLO_TARGET_DOING_LIST_ID 2>/dev/null || true
+
 write_secrets
 
 # 2) Update available message + help.
@@ -347,7 +373,7 @@ set_curl_queue
 printf '%s\n' "feature/aaaaaaaaaaaaaaaaaaaaaaaa-default" > "${MOCK_GIT_STATE_FILE}"
 run_traced_snippet "doing_missing_list" "${SCENARIO_DIR}" 'TARGET_DOING_LIST_ID=""; trello_doing'
 assert_status 1 "${LAST_STATUS}" "doing with missing list id should fail"
-assert_contains "${LAST_STDOUT}" "List ID for 'Doing' is not configured in ${TEST_HOME}/.trello_secrets." "doing missing list output"
+assert_contains "${LAST_STDOUT}" "List ID for 'Doing' is not configured (source: ${TEST_HOME}/.trello_secrets)." "doing missing list output"
 
 # 12) doing command success path.
 set_curl_queue \
@@ -371,7 +397,7 @@ assert_contains "${LAST_STDOUT}" "✅ Card successfully moved to To Do!" "todo s
 set_curl_queue
 run_traced_snippet "list_missing_target" "${SCENARIO_DIR}" 'TARGET_LIST_ID=""; trello_list'
 assert_status 1 "${LAST_STATUS}" "list with missing list id should fail"
-assert_contains "${LAST_STDOUT}" "TARGET_LIST_ID is not configured in ${TEST_HOME}/.trello_secrets." "missing list id message"
+assert_contains "${LAST_STDOUT}" "TARGET_LIST_ID is not configured (source: ${TEST_HOME}/.trello_secrets)." "missing list id message"
 
 # 15) list empty state.
 set_curl_queue '200|[]'

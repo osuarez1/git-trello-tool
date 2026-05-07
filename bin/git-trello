@@ -19,6 +19,7 @@ SECRETS_FILE="$HOME/.trello_secrets"
 LOG_FILE="$HOME/.git-trello.log"
 DRY_RUN=false
 DEBUG_MODE=false
+SECRETS_SOURCE="$SECRETS_FILE"
 
 # Define Colors
 BLUE='\033[0;34m'
@@ -26,12 +27,24 @@ GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 
-# Load Secrets
+# Load Secrets (file preferred, env fallback)
 if [ -f "$SECRETS_FILE" ]; then
+    # shellcheck disable=SC1090
     source "$SECRETS_FILE"
 else
-    echo "Error: ~/.trello_secrets not found. Please run install.sh."
-    exit 1
+    SECRETS_SOURCE="environment variables"
+
+    API_KEY="${API_KEY:-${TRELLO_API_KEY:-}}"
+    TOKEN="${TOKEN:-${TRELLO_TOKEN:-}}"
+    TARGET_BOARD_ID="${TARGET_BOARD_ID:-${TRELLO_TARGET_BOARD_ID:-}}"
+    TARGET_LIST_ID="${TARGET_LIST_ID:-${TRELLO_TARGET_LIST_ID:-}}"
+    TARGET_DOING_LIST_ID="${TARGET_DOING_LIST_ID:-${TRELLO_TARGET_DOING_LIST_ID:-}}"
+
+    if [ -z "$API_KEY" ] || [ -z "$TOKEN" ]; then
+        echo "Error: Trello secrets not found."
+        echo "Either create $SECRETS_FILE or set API_KEY and TOKEN (or TRELLO_API_KEY and TRELLO_TOKEN)."
+        exit 1
+    fi
 fi
 
 # Parse Flags
@@ -188,7 +201,7 @@ move_trello_card() {
     local user_name=$(git config user.name)
 
     if [ -z "$target_list_id" ]; then
-        log_message "ERROR" "List ID for '$list_name' is not configured in $SECRETS_FILE."
+        log_message "ERROR" "List ID for '$list_name' is not configured (source: $SECRETS_SOURCE)."
         exit 1
     fi
 
@@ -230,7 +243,7 @@ trello_list() {
     log_message "DEBUG" "Fetching cards from To Do list..."
 
     if [ -z "$TARGET_LIST_ID" ]; then
-        log_message "ERROR" "TARGET_LIST_ID is not configured in $SECRETS_FILE."
+        log_message "ERROR" "TARGET_LIST_ID is not configured (source: $SECRETS_SOURCE)."
         exit 1
     fi
 
