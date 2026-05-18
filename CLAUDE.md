@@ -59,7 +59,7 @@ Both harnesses use `bash -x` (xtrace) with a `PS4` prefix that embeds `${BASH_SO
 
 These are copied into the end-user's `.git-trello/hooks/` by the installer:
 
-- **`prepare-commit-msg`**: Appends `Trello-Card: <24-char-id>` to every commit message, extracted from the branch name. Skips merge/squash commits and if the tag is already present.
+- **`prepare-commit-msg`**: Optionally appends `Trello-Card: <24-char-id>` when `git config git-trello.injectCommitCard true` (off by default). Extracts ID from branch name; skips merge/squash commits and if the tag is already present.
 - **`pre-push`**: Rejects pushes on non-protected branches that lack a 24-character hex Trello ID.
 - **`post-commit`**: After a successful commit, loads `~/.trello_secrets` (if present), moves the card to the configured Doing list, and posts commit metadata to Trello via `curl`. Lives in `hooks/post-commit` and is not exercised by the line-coverage harness (network and secrets).
 

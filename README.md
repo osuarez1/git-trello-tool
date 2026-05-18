@@ -12,7 +12,7 @@ This tool handles the "boring stuff"—Trello card creation, strict branch namin
 * **Smart Language Detection**: Automatically scans your repository for files like `package.json`, `requirements.txt`, or `Gemfile` and tags your Trello cards with the detected primary language.
 * **Local, Non-Destructive Installation**: Installs silently into a hidden `.git-trello/` directory specific to your current repository, ensuring it never conflicts with your global Git configuration or other team members' setups.
 * **Automated Git Hooks**:
-    * **`prepare-commit-msg`**: Automatically injects your Trello Card ID into the bottom of every commit message.
+    * **`prepare-commit-msg`**: Optionally injects your Trello Card ID into the bottom of commit messages (off by default; see Configuration).
     * **`pre-push`**: Acts as a local bouncer, blocking pushes to Bitbucket if your feature branch does not contain a valid 24-character Trello ID.
 * **CI/CD Readiness**: Generates standard branch names and commit metadata, making it trivial to configure automatic Trello list movement in Bitbucket Pipelines.
 
@@ -62,6 +62,16 @@ export TARGET_DOING_LIST_ID="your_doing_list_id"
 ```
 
 *(Because this file lives in your home directory, you only have to configure it once, and all your local repository installations will share it!)*
+
+### Commit message Trello Card footer (opt-in)
+
+By default, the `prepare-commit-msg` hook does **not** append a `Trello-Card:` line to commits. To enable injection for this repository:
+
+```bash
+git config git-trello.injectCommitCard true
+```
+
+To turn it off again: `git config --unset git-trello.injectCommitCard`
 
 ### Using sandboxed IDEs / env-injected credentials
 Some environments (CI, devcontainers, sandboxed IDE terminals) prefer **injecting secrets via environment variables** instead of reading `~/.trello_secrets`.
