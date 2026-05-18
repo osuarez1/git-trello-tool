@@ -69,7 +69,29 @@ test_pre_push_branch_validation() {
     [[ "$status" -ne 0 ]]
 }
 
-test_prepare_commit_msg_injection() {
+write_prepare_commit_msg_git_stub() {
+    local tmp_dir="$1"
+    local inject_enabled="${2:-false}"
+
+    cat > "$tmp_dir/git" <<EOF
+#!/usr/bin/env bash
+if [[ "\$1" == "config" && "\$2" == "--bool" && "\$3" == "git-trello.injectCommitCard" ]]; then
+    if [[ "$inject_enabled" == "true" ]]; then
+        echo "true"
+        exit 0
+    fi
+    exit 1
+fi
+if [[ "\$1" == "branch" && "\$2" == "--show-current" ]]; then
+    echo "feature/abcdef123456abcdef123456-new-thing"
+    exit 0
+fi
+exit 1
+EOF
+    chmod +x "$tmp_dir/git"
+}
+
+test_prepare_commit_msg_disabled_by_default() {
     local tmp_dir
     local msg_file
     local original_path
@@ -79,16 +101,32 @@ test_prepare_commit_msg_injection() {
     msg_file="$tmp_dir/COMMIT_EDITMSG"
     original_path="$PATH"
 
-    cat > "$tmp_dir/git" <<'EOF'
-#!/usr/bin/env bash
-if [[ "$1" == "branch" && "$2" == "--show-current" ]]; then
-    echo "feature/abcdef123456abcdef123456-new-thing"
-    exit 0
-fi
-exit 1
-EOF
-    chmod +x "$tmp_dir/git"
+    write_prepare_commit_msg_git_stub "$tmp_dir" "false"
+    printf 'feat: add behavior\n' > "$msg_file"
+    PATH="$tmp_dir:$PATH"
 
+    set +e
+    bash "$ROOT_DIR/hooks/prepare-commit-msg" "$msg_file" ""
+    status=$?
+    set -e
+    PATH="$original_path"
+    [[ "$status" -eq 0 ]] || return 1
+
+    ! grep -q 'Trello-Card:' "$msg_file"
+}
+
+test_prepare_commit_msg_injection_when_enabled() {
+    local tmp_dir
+    local msg_file
+    local original_path
+    local status
+    local count
+
+    tmp_dir="$(mktemp -d)"
+    msg_file="$tmp_dir/COMMIT_EDITMSG"
+    original_path="$PATH"
+
+    write_prepare_commit_msg_git_stub "$tmp_dir" "true"
     printf 'feat: add behavior\n' > "$msg_file"
     PATH="$tmp_dir:$PATH"
 
@@ -110,7 +148,6 @@ EOF
     PATH="$original_path"
     [[ "$status" -eq 0 ]] || return 1
 
-    local count
     count="$(grep -c 'Trello-Card: abcdef123456abcdef123456' "$msg_file")"
     [[ "$count" == "1" ]]
 }
@@ -118,7 +155,8 @@ EOF
 main() {
     run_test "version sync remains consistent" test_sync_version_consistency
     run_test "pre-push validates branch naming rules" test_pre_push_branch_validation
-    run_test "prepare-commit-msg injects card ID once" test_prepare_commit_msg_injection
+    run_test "prepare-commit-msg skips injection by default" test_prepare_commit_msg_disabled_by_default
+    run_test "prepare-commit-msg injects card ID once when enabled" test_prepare_commit_msg_injection_when_enabled
 
     printf '\nResult: %d passed, %d failed\n' "$PASS_COUNT" "$FAIL_COUNT"
 
