@@ -1,5 +1,10 @@
 #!/bin/bash
-# Automatically injects the Trello ID from the branch name into the commit message.
+# Optionally injects the Trello ID from the branch name into the commit message.
+# Opt in per repo: git config git-trello.injectCommitCard true
+
+if ! git config --bool git-trello.injectCommitCard >/dev/null 2>&1; then
+    exit 0
+fi
 
 COMMIT_MSG_FILE=$1
 COMMIT_SOURCE=$2
