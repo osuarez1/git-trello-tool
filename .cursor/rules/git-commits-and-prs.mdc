@@ -1,0 +1,26 @@
+---
+description: Conventional Commits by scope; no trailers or co-authored lines
+alwaysApply: true
+---
+
+# Git commits and pull requests
+
+Follow [CONVENTION.md](CONVENTION.md) for all commits and PRs in this repository.
+
+## Commits
+
+- Use Conventional Commits with a **scope**: `<type>(scope): short imperative summary`
+- Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`
+- Split work into **separate commits by scope** (e.g. `feat(hooks)`, `test(cli)`, `docs`, `chore(version)`) instead of one large commit
+- Bump `CURRENT_VERSION` in `bin/git-trello` and sync `version.txt` via `scripts/sync-version.sh --write` in a dedicated `chore(version)` commit when releasing
+
+## Forbidden on commits
+
+- Do **not** pass `--trailer` (or any trailer flags) to `git commit`
+- Do **not** add `Co-authored-by`, `Signed-off-by`, or other trailer lines to commit messages unless the user explicitly requests them
+
+## Pull requests
+
+- PR title uses the same `<type>(scope): summary` style as the primary commit
+- PR body follows CONVENTION.md (Overview, Summary of Changes, Testing Instructions, Risk/Impact, Related Tickets, checklist)
+- Do **not** add co-author trailers or similar metadata to PR descriptions unless explicitly requested
