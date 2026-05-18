@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-05-18
+
+### Changed
+- **`prepare-commit-msg`:** `Trello-Card:` footer injection is now opt-in per repository via `git config git-trello.injectCommitCard true` (disabled by default). Re-enable if you rely on commit-message metadata for CI or Bitbucket Pipelines.
+
+### Test
+- **CLI integration tests:** Split prepare-commit-msg coverage into default-off and enabled-on scenarios.
+
 ## [1.1.6] - 2026-05-07
 
 ### Added
